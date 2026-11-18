@@ -1,0 +1,39 @@
+name: t4300 big merges on Windows (LLP64)
+
+on: push
+
+jobs:
+  t4300:
+    name: t4300 GIT_TEST_LONG on ${{ matrix.name }}
+    runs-on: windows-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: base e1ec09b23c (without the series)
+            rev: e1ec09b23c8e0deb21a0b95ac5996422277395d4
+          - name: series df888e03eb (Christian's 3 patches)
+            rev: df888e03eb
+    steps:
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      with:
+        fetch-depth: 10
+    - name: check out the revision to test
+      shell: bash
+      run: git checkout --detach ${{ matrix.rev }} && git log -1 --oneline
+    - uses: git-for-windows/setup-git-for-windows-sdk@aed153d1258c311b680b81584a72a1a4807401f0 # v2
+    - name: build
+      shell: bash
+      env:
+        HOME: ${{runner.workspace}}
+      run: . /etc/profile && make -j$(nproc) NO_PERL=1 NO_RUST=1
+    - name: run t4300 with GIT_TEST_LONG=1
+      shell: bash
+      env:
+        HOME: ${{runner.workspace}}
+        GIT_TEST_LONG: 1
+      run: |
+        . /etc/profile &&
+        cd t &&
+        sh t4300-merge-tree.sh -v
